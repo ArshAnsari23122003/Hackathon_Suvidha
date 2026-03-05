@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+// 1. Ensure this import path is correct based on your file structure
+import AadharCard from "./AadharCard"; 
 import {
   User, ChevronDown, LogOut, Folder, Clock, AlertTriangle,
   CreditCard, Loader2, Search, RefreshCw, ArrowLeft,
-  Filter, MessageSquare, ChevronRight
+  Filter, MessageSquare, ChevronRight, Contact2
 } from "lucide-react";
 
 const Profile = ({ onLogout }) => {
@@ -16,9 +18,20 @@ const Profile = ({ onLogout }) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [filterStatus, setFilterStatus] = useState("All");
 
+  // 2. State to hold the user data from localStorage
+  const [currentUser, setCurrentUser] = useState(null);
+
   const dropdownRef = useRef(null);
   const { t } = useTranslation();
   const navigate = useNavigate();
+
+  // Load user data whenever the dropdown opens
+  useEffect(() => {
+    if (isOpen) {
+      const data = JSON.parse(localStorage.getItem("user"));
+      setCurrentUser(data);
+    }
+  }, [isOpen]);
 
   const fetchUserHistory = async () => {
     const userData = JSON.parse(localStorage.getItem("user"));
@@ -34,11 +47,11 @@ const Profile = ({ onLogout }) => {
       if (data.success) {
         setUserRequests(data.requests);
       } else {
-        setUserRequests([]); // Clear if no success
+        setUserRequests([]);
       }
     } catch (err) {
       console.error("API Error:", err);
-      setUserRequests([]); // Don't use demo data, show empty state instead
+      setUserRequests([]);
     } finally {
       setLoading(false);
     }
@@ -56,7 +69,6 @@ const Profile = ({ onLogout }) => {
           status: result.status,
           update: result.remarks || "Your application is under process."
         });
-        // Update the list as well
         setUserRequests(prev => prev.map(r => 
             r.srn === srn ? { ...r, status: result.status, remarks: result.remarks } : r
         ));
@@ -99,11 +111,13 @@ const Profile = ({ onLogout }) => {
         <User className="w-5 h-5 text-gray-500" />
       </button>
 
-      <div className={`absolute right-0 mt-3 w-80 bg-white border border-gray-200 rounded-2xl shadow-2xl py-3 transition-all duration-300 ease-out transform origin-top z-50 ${
+      {/* Increased width to w-96 to accommodate the Aadhaar Card visual better */}
+      <div className={`absolute right-0 mt-3 w-96 bg-white border border-gray-200 rounded-2xl shadow-2xl py-3 transition-all duration-300 ease-out transform origin-top z-50 ${
           isOpen ? "scale-100 opacity-100 visible" : "scale-95 opacity-0 invisible"
         }`}
       >
         {trackingItem ? (
+          /* --- TRACKING VIEW --- */
           <div className="px-4 py-2">
             <button 
               onClick={() => setTrackingItem(null)}
@@ -114,16 +128,16 @@ const Profile = ({ onLogout }) => {
             
             <div className="bg-indigo-600 rounded-xl p-4 text-white shadow-lg relative overflow-hidden">
                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="text-[9px] font-black opacity-70 uppercase">Current Status</p>
-                    <h4 className="text-lg font-black">{trackingItem.status}</h4>
-                  </div>
-                  <button 
-                    onClick={() => refreshStatus(trackingItem.id)}
-                    className={`p-2 bg-white/20 rounded-lg transition ${isRefreshing ? 'animate-spin' : 'hover:bg-white/30'}`}
-                  >
-                    <RefreshCw size={14} />
-                  </button>
+                 <div>
+                   <p className="text-[9px] font-black opacity-70 uppercase">Current Status</p>
+                   <h4 className="text-lg font-black">{trackingItem.status}</h4>
+                 </div>
+                 <button 
+                   onClick={() => refreshStatus(trackingItem.id)}
+                   className={`p-2 bg-white/20 rounded-lg transition ${isRefreshing ? 'animate-spin' : 'hover:bg-white/30'}`}
+                 >
+                   <RefreshCw size={14} />
+                 </button>
                </div>
                <p className="text-[10px] font-mono opacity-80">{trackingItem.id}</p>
             </div>
@@ -134,7 +148,37 @@ const Profile = ({ onLogout }) => {
             </div>
           </div>
         ) : (
+          /* --- MAIN MENU VIEW --- */
           <>
+            {/* 1. DIGITAL IDENTITY SECTION (NEW) */}
+           {/* IDENTITY ACCORDION SECTION */}
+          <button
+            onClick={() => setOpenSection(openSection === "identity" ? null : "identity")}
+            className="w-full flex justify-between items-center px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <Contact2 size={18} className="text-orange-500" />
+              {t("Digital Identity")}
+            </div>
+            <ChevronDown size={16} className={`transition-transform ${openSection === "identity" ? "rotate-180" : ""}`} />
+          </button>
+
+          {openSection === "identity" && (
+            <div className="mx-2 mb-3 p-4 bg-gradient-to-b from-slate-50 to-white rounded-2xl border border-slate-100 shadow-inner overflow-hidden">
+              {/* The Card Component */}
+              <AadharCard userData={currentUser} />
+              
+              <div className="mt-4 flex items-center justify-center gap-2 text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                <div className="h-px w-8 bg-slate-200"></div>
+                Secure Digital Vault
+                <div className="h-px w-8 bg-slate-200"></div>
+              </div>
+            </div>
+          )}
+
+            <div className="h-px bg-slate-100 mx-4 my-1"></div>
+
+            {/* 2. SERVICES HISTORY SECTION (EXISTING) */}
             <button
               onClick={() => setOpenSection(openSection === "services" ? null : "services")}
               className="w-full flex justify-between items-center px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition-all"
@@ -198,7 +242,7 @@ const Profile = ({ onLogout }) => {
               </div>
             )}
 
-            {/* ... rest of your UI (Complaints and Fines buttons) ... */}
+            {/* 3. NAVIGATION BUTTONS (EXISTING) */}
             <button
               onClick={() => navigate("/my-complaints")}
               className="w-full flex justify-between items-center px-4 py-3 text-sm font-bold text-gray-700 hover:bg-slate-50 transition-all"
